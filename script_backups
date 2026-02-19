@@ -1,0 +1,33 @@
+#!/bin/bash
+
+BACKUPDIR="root/backups/mariadb/"
+DATE=$(date +"%Y-%m-%d%H-%M")
+RETENTION_DAYS=3
+
+REMOTE_USER="server_outils"
+REMOTE_HOST="192.168.80.10"
+REMOTE_DIR="/home/server_outils/backups/servbdd2"
+SSH_KEY="/root/.ssh/id_ed25519"
+
+FILE="$BACKUPDIR/mariadb$DATE.sql.gz"
+
+DUMP LOCAL
+mariadb-dump -u save -proot --socket=/var/run/mysqld/mysqld.sock aledoskour |gzip > "$FILE"
+
+if [ $? -ne 0 ]; then
+    echo "Erreur de dump"
+    exit 1 
+fi
+
+Transfert pc host
+scp -i "ssh -i $SSH_KEY" -C "$FILE" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
+
+if [ $? -ne 0 ]; then
+    echo "Erreur de dump"
+    exit 1 
+fi
+
+Nettoyage local
+find "$BACKUPDIR" -type f -name "mariadb$DATE.sql.gz" -mtime +$RETENTION_DAY -exec rm {} :
+
+echo "Dump réussi : $DATE"
